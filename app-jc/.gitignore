@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# Local env files
+.env*.local
+
+# Typescript
+*.tsbuildinfo
+
+# Exemple d'application
+app-example
+
+# --- Fichiers sensibles --- #
+# Ignorer les fichiers de configuration Firebase et les clés API
+firebaseConfig.ts
+
+# Ignorer le fichier de clés Google Cloud JSON
+app-jc/jsonservice/jc-service.json
