@@ -31,27 +31,39 @@ const BottomDecorativeShape = () => {
   );
 };
 
-export default function LivreurLogin() {
+const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const signIn = async () => {
     try {
+      // Essayer de se connecter avec Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Vérifier si l'utilisateur existe dans la collection "Livreur"
-      const livreursRef = collection(db, "Livreur");
-      const livreurQuery = query(livreursRef, where("email", "==", email));
-      const livreurSnapshot = await getDocs(livreurQuery);
+      // Vérification si l'utilisateur existe dans la collection Client
+      const clientsRef = collection(db, "Client");
+      const clientQuery = query(clientsRef, where("email", "==", email));
+      const clientSnapshot = await getDocs(clientQuery);
 
-      if (!livreurSnapshot.empty) {
-        // Si c'est un livreur, rediriger vers la page de l'espace livreur
-        router.replace("/(tabs)/home"); // Remplace "/livreurHome" par le chemin de l'interface du livreur
+      // Si l'utilisateur est un Client
+      if (!clientSnapshot.empty) {
+        router.replace("/(tabs)/home");
       } else {
-        // Si l'utilisateur n'est pas un livreur, afficher un message d'erreur et déconnecter
-        alert("Compte non trouvé dans la collection Livreur.");
-        await auth.signOut();
+        // Si l'utilisateur n'est pas un Client, vérifier s'il est un Livreur
+        const livreursRef = collection(db, "Livreur");
+        const livreurQuery = query(livreursRef, where("email", "==", email));
+        const livreurSnapshot = await getDocs(livreurQuery);
+
+        if (!livreurSnapshot.empty) {
+          // Si c'est un Livreur, ne pas rediriger vers la page home
+          alert("Compte de livreur détecté. Vous ne pouvez pas accéder à cette section.");
+          await auth.signOut(); // Déconnexion si c'est un livreur
+        } else {
+          // Si l'utilisateur n'est ni un client, ni un livreur
+          alert("Compte non trouvé dans la collection Client.");
+          await auth.signOut(); // Déconnexion
+        }
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -72,10 +84,10 @@ export default function LivreurLogin() {
         <View className="flex-1">
           <View className="flex-1 p-6 justify-center">
             <Text className="text-3xl text-center font-bold text-gray-800 mb-2">
-              Connexion Livreur
+              Espace Client
             </Text>
             <Text className="text-base text-center text-gray-500 mb-8">
-              Bienvenue livreur !
+              Content de te revoir !
             </Text>
 
             <View className="space-y-5">
@@ -85,7 +97,7 @@ export default function LivreurLogin() {
                 </Text>
                 <TextInput
                   className="w-full bg-gray-100 rounded-lg px-4 py-3 text-base text-gray-800"
-                  placeholder="Entrez votre email"
+                  placeholder="Entrer votre email"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -100,7 +112,7 @@ export default function LivreurLogin() {
                 <View className="relative">
                   <TextInput
                     className="w-full bg-gray-100 rounded-lg px-4 py-3 text-base text-gray-800 pr-12"
-                    placeholder="Entrez votre mot de passe"
+                    placeholder="Entrer votre mot de passe"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -139,4 +151,6 @@ export default function LivreurLogin() {
       </TouchableWithoutFeedback>
     </SafeAreaView>
   );
-}
+};
+
+export default ClientLogin;

@@ -6,7 +6,7 @@ export default function Index() {
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="auto" />
-      <Redirect href="/(auth)/login" />
+      <Redirect href="/(auth)/chooseRole" />
     </View>
   );
 }
