@@ -16,6 +16,7 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 
+        { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownInputParams; } |
         { pathname: `/+not-found`, params: Router.UnknownInputParams & { } };
       
       hrefOutputParams: 
@@ -28,6 +29,7 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownOutputParams; } | 
+        { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownOutputParams; } |
         { pathname: `/+not-found`, params: Router.UnknownOutputParams & { } };
       
       href: 
@@ -47,6 +49,8 @@ declare module 'expo-router' {
         `/profile${`?${string}` | `#${string}` | ''}` | 
         `${'/(tabs)'}/panierRecap${`?${string}` | `#${string}` | ''}` | 
         `/panierRecap${`?${string}` | `#${string}` | ''}` | 
+        `${'/(tabs)'}/deliveryDepot${`?${string}` | `#${string}` | ''}` | 
+        `/deliveryDepot${`?${string}` | `#${string}` | ''}` |
         { pathname: Router.RelativePathString, params?: Router.UnknownInputParams } | 
         { pathname: Router.ExternalPathString, params?: Router.UnknownInputParams } | 
         { pathname: `/../FirebaseConfig`; params?: Router.UnknownInputParams; } | 
@@ -56,6 +60,7 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 
+        { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownInputParams; } |
         `/+not-found` | 
         { pathname: `/+not-found`, params: Router.UnknownInputParams & { } };
     }

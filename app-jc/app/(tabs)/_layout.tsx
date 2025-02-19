@@ -6,6 +6,7 @@ const Layout = () => {
       <Stack.Screen name="home" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="panierRecap" />
+      <Stack.Screen name="deliveryDepot" />
     </Stack>
   );
 };

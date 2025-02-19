@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '../../FirebaseConfig';
-import { collection, query, where, getDocs, DocumentData, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
-// Types
 interface Panier {
   familial: number;
   oeuf: number;
@@ -22,11 +21,6 @@ interface PanierData {
   commentaire?: string;
 }
 
-interface RouteParams {
-  villeNom: string;
-  jour: string;
-}
-
 interface Totals {
   familial: number;
   oeuf: number;
@@ -34,36 +28,30 @@ interface Totals {
 }
 
 const PanierRecap = () => {
-  // Navigation & Route
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { villeNom, jour } = route.params as RouteParams;
+  const params = useLocalSearchParams();
+  const villeNom = params.villeNom as string;
+  const jour = params.jour as string;
 
-  // States
   const [paniers, setPaniers] = useState<PanierData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totals, setTotals] = useState<Totals>({
     familial: 0,
     oeuf: 0,
-    simple: 0
+    simple: 0,
   });
 
-  // Fetch data
   useEffect(() => {
     let isMounted = true;
-  
     const fetchPaniers = async () => {
       try {
         setLoading(true);
-  
-        // 🔥 Optimisation : on filtre directement côté Firestore avec where()
         const q = query(
           collection(db, "Panier"),
           where("ville", "==", villeNom.trim()), 
           where("tourneeid", "==", jour.toLowerCase().trim())
         );
-  
+
         const snapshot = await getDocs(q);
         const filteredDocs: PanierData[] = snapshot.docs.map((doc) => {
           const data = doc.data();
@@ -81,13 +69,12 @@ const PanierRecap = () => {
             commentaire: data.commentaire,
           };
         });
-  
+
         if (isMounted) {
           if (filteredDocs.length === 0) {
             setError(`Aucun panier à livrer pour ${villeNom} le ${jour}`);
           } else {
             setPaniers(filteredDocs);
-            // Mise à jour des totaux
             setTotals({
               familial: filteredDocs.reduce((sum, p) => sum + p.panier.familial, 0),
               oeuf: filteredDocs.reduce((sum, p) => sum + p.panier.oeuf, 0),
@@ -104,26 +91,23 @@ const PanierRecap = () => {
         }
       }
     };
-  
+
     fetchPaniers();
-  
+
     return () => {
       isMounted = false;
     };
-  }, [villeNom, jour]); // Dépendances
-  
+  }, [villeNom, jour]);
 
-  // Handlers
   const handleStatusUpdate = async (panierId: string, newStatus: string) => {
     try {
       const panierRef = doc(db, "Panier", panierId);
       await updateDoc(panierRef, {
-        statut: newStatus
+        statut: newStatus,
       });
 
-      // Update local state
-      setPaniers(current =>
-        current.map(panier =>
+      setPaniers((current) =>
+        current.map((panier) =>
           panier.id === panierId
             ? { ...panier, statut: newStatus }
             : panier
@@ -137,40 +121,40 @@ const PanierRecap = () => {
     }
   };
 
-  // Render Header
+  const handleNextStep = () => {
+    router.push({
+      pathname: '/(tabs)/deliveryDepot',
+      params: { villeNom, jour }
+    });
+  };
+
   const renderHeader = () => (
-    <View className="flex-row items-center justify-between mb-6">
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        className="p-2"
-      >
-        <Ionicons name="arrow-back" size={24} color="#000" />
+    <View className="flex-row items-center justify-between mb-4 pt-10">
+      <TouchableOpacity onPress={() => router.back()} className="p-3">
+        <Ionicons name="arrow-back" size={24} color="#3B82F6" />
       </TouchableOpacity>
-      <Text className="text-xl font-bold flex-1 ml-3">
-        {villeNom}
+      <Text className="text-2xl font-bold text-blue-700 text-center flex-1 pr-11">
+        Panier - {villeNom}
       </Text>
     </View>
   );
 
-  // Render Summary
   const renderTotals = () => (
-    <View className="bg-blue-100 p-4 rounded-lg mb-6">
-      <Text className="text-xl font-bold text-blue-800 mb-3">
-        Récapitulatif
-      </Text>
-      <View className="space-y-2">
+    <View className="bg-blue-100 p-4 rounded-lg mb-4">
+      <Text className="text-xl font-bold text-blue-800 mb-3">Récapitulatif</Text>
+      <View className="my-2">
         {totals.familial > 0 && (
-          <Text className="text-blue-700 font-medium">
+          <Text className="text-blue-800 text-lg">
             {totals.familial} Panier{totals.familial > 1 ? 's' : ''} Familial{totals.familial > 1 ? 's' : ''}
           </Text>
         )}
         {totals.oeuf > 0 && (
-          <Text className="text-blue-700 font-medium">
+          <Text className="text-blue-800 text-lg">
             {totals.oeuf} Boîte{totals.oeuf > 1 ? 's' : ''} d'Œufs
           </Text>
         )}
         {totals.simple > 0 && (
-          <Text className="text-blue-700 font-medium">
+          <Text className="text-blue-800 text-lg">
             {totals.simple} Panier{totals.simple > 1 ? 's' : ''} Simple{totals.simple > 1 ? 's' : ''}
           </Text>
         )}
@@ -178,16 +162,15 @@ const PanierRecap = () => {
     </View>
   );
 
-  // Render Status Button
   const renderStatusButton = (panier: PanierData) => (
     <TouchableOpacity
-      className={`px-4 py-2 rounded-lg ${
-        panier.statut === "Livré" 
-          ? "bg-green-100" 
-          : panier.statut === "En cours" 
-          ? "bg-orange-100"
-          : "bg-gray-100"
-      }`}
+      className={`px-4 py-2 rounded-full ${
+        panier.statut === "Livré"
+          ? 'bg-green-100'
+          : panier.statut === "En cours"
+          ? 'bg-yellow-200'
+          : 'bg-blue-100'
+      } items-center justify-center`}
       onPress={() => {
         Alert.alert(
           'Mise à jour du statut',
@@ -195,68 +178,66 @@ const PanierRecap = () => {
           [
             {
               text: 'En attente',
-              onPress: () => handleStatusUpdate(panier.id, 'En attente')
+              onPress: () => handleStatusUpdate(panier.id, 'En attente'),
             },
             {
               text: 'En cours',
-              onPress: () => handleStatusUpdate(panier.id, 'En cours')
+              onPress: () => handleStatusUpdate(panier.id, 'En cours'),
             },
             {
               text: 'Livré',
-              onPress: () => handleStatusUpdate(panier.id, 'Livré')
+              onPress: () => handleStatusUpdate(panier.id, 'Livré'),
             },
             {
               text: 'Annuler',
-              style: 'cancel'
-            }
+              style: 'cancel',
+            },
           ]
         );
       }}
     >
-      <Text className={`font-medium ${
-        panier.statut === "Livré" 
-          ? "text-green-700" 
-          : panier.statut === "En cours" 
-          ? "text-orange-700"
-          : "text-gray-700"
+      <Text className={`font-semibold ${
+        panier.statut === "Livré"
+          ? 'text-teal-800'
+          : panier.statut === "En cours"
+          ? 'text-yellow-800'
+          : 'text-blue-800'
       }`}>
         {panier.statut}
       </Text>
     </TouchableOpacity>
   );
 
-  // Render Paniers List
   const renderPaniersList = () => (
-    <View className="space-y-4">
+    <View className="my-4">
       {paniers.map((panier) => (
-        <View key={panier.id} className="bg-white p-4 rounded-lg shadow-sm">
+        <View key={panier.id} className="bg-white p-4 rounded-lg mb-3 shadow-md">
           <View className="flex-row justify-between items-start mb-3">
-            <Text className="text-lg font-semibold flex-1">
+            <Text className="text-lg font-semibold text-gray-800 flex-1">
               {panier.adresse}
             </Text>
             {renderStatusButton(panier)}
           </View>
-          
-          <View className="space-y-1">
+          <View className="mb-3">
             {panier.panier.familial > 0 && (
-              <Text className="text-gray-600">
+              <Text className="text-gray-600 text-lg">
                 {panier.panier.familial} Panier{panier.panier.familial > 1 ? 's' : ''} Familial{panier.panier.familial > 1 ? 's' : ''}
               </Text>
             )}
             {panier.panier.oeuf > 0 && (
-              <Text className="text-gray-600">
+              <Text className="text-gray-600 text-lg">
                 {panier.panier.oeuf} Boîte{panier.panier.oeuf > 1 ? 's' : ''} d'Œufs
               </Text>
             )}
             {panier.panier.simple > 0 && (
-              <Text className="text-gray-600">
+              <Text className="text-gray-600 text-lg">
                 {panier.panier.simple} Panier{panier.panier.simple > 1 ? 's' : ''} Simple{panier.panier.simple > 1 ? 's' : ''}
               </Text>
             )}
           </View>
 
           {panier.commentaire && (
-            <Text className="mt-2 text-gray-500 italic">
+            <Text className="mt-2 text-gray-600 italic">
               Note: {panier.commentaire}
             </Text>
           )}
@@ -265,29 +246,38 @@ const PanierRecap = () => {
     </View>
   );
 
-  // Loading State
+  const renderNextButton = () => (
+    <TouchableOpacity
+      onPress={handleNextStep}
+      className="bg-blue-600 rounded-lg py-4 items-center mb-6"
+    >
+      <Text className="text-white font-bold text-lg">
+        Suivant: Livraison par dépôt
+      </Text>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
   }
 
-  // Error State
   if (error) {
     return (
       <View className="flex-1 bg-white p-4">
         {renderHeader()}
         <View className="flex-1 justify-center items-center">
-          <Text className="text-red-500 text-lg text-center mb-4">
+          <Text className="text-red-600 text-xl text-center mb-4">
             {error}
           </Text>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="bg-blue-500 px-6 py-3 rounded-lg"
+            onPress={() => router.back()}
+            className="bg-blue-600 py-3 px-6 rounded-lg"
           >
-            <Text className="text-white font-medium">
+            <Text className="text-white font-semibold">
               Retour
             </Text>
           </TouchableOpacity>
@@ -296,13 +286,13 @@ const PanierRecap = () => {
     );
   }
 
-  // Main Render
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView className="flex-1 bg-gray-100">
       <View className="p-4">
         {renderHeader()}
         {renderTotals()}
         {renderPaniersList()}
+        {renderNextButton()}
       </View>
     </ScrollView>
   );

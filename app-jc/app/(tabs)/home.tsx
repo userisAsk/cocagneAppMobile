@@ -214,9 +214,23 @@ const Home = () => {
         </View>
       ) : (
         <ScrollView>
-          <Text className="text-2xl font-bold text-gray-800 pt-20">
-            Bonjour, {user ? `${user.prenom}` : "Utilisateur"} 👋
-          </Text>
+          <View className="flex-row justify-between items-center pt-20">
+            <Text className="text-2xl font-bold text-gray-800">
+              Bonjour, {user ? `${user.prenom}` : "Utilisateur"} 👋
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                router.push("/profile"); 
+              }}
+            >
+               <View className="w-12 h-12 rounded-full bg-sky-600 justify-center items-center">
+                <Text className="text-white text-xl font-bold">
+                  {user?.prenom[0]}{user?.nom[0]}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+  
           <View className="mt-6">
             <Text className="text-lg font-semibold text-gray-800">
               Tournée du {getJourSemaine()}
