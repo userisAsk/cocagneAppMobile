@@ -8,9 +8,9 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  Dimensions
+  Dimensions,
 } from "react-native";
-import MapView, { Marker, Polyline, Region } from "react-native-maps";
+import MapView, { Marker, Polyline, Region, Callout } from "react-native-maps";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../../FirebaseConfig";
@@ -34,6 +34,19 @@ interface VilleDepots {
     [key: string]: Depot;
   };
 }
+
+// Composant de marqueur numéroté
+const NumberedMarker: React.FC<{
+  number: number;
+  isSelected: boolean;
+}> = ({ number, isSelected }) => (
+  <View style={[
+    styles.markerContainer,
+    isSelected ? styles.selectedMarker : styles.normalMarker
+  ]}>
+    <Text style={styles.markerText}>{number}</Text>
+  </View>
+);
 
 // Styles
 const styles = StyleSheet.create({
@@ -79,6 +92,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  markerContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "white",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  selectedMarker: {
+    backgroundColor: "#3B82F6",
+  },
+  normalMarker: {
+    backgroundColor: "#EF4444",
+  },
+  markerText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   depotInfo: {
     margin: 16,
@@ -167,6 +208,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  calloutContainer: {
+    padding: 8,
+    minWidth: 150,
+  },
+  calloutText: {
+    fontSize: 14,
+    color: "#4B5563",
+    marginBottom: 4,
+  },
 });
 
 const DeliveryDepot: React.FC = () => {
@@ -202,7 +252,7 @@ const DeliveryDepot: React.FC = () => {
   const calculateRegion = (depotsArray: Depot[]): Region => {
     if (depotsArray.length === 0) {
       return {
-        latitude: 46.603354,  // Centre de la France
+        latitude: 46.603354,
         longitude: 1.888334,
         latitudeDelta: 10,
         longitudeDelta: 10,
@@ -218,7 +268,6 @@ const DeliveryDepot: React.FC = () => {
     const centerLat = (minLat + maxLat) / 2;
     const centerLng = (minLng + maxLng) / 2;
     
-    // Ajouter une marge pour une meilleure visualisation
     const latDelta = Math.max(0.02, (maxLat - minLat) * 1.5);
     const lngDelta = Math.max(0.02, (maxLng - minLng) * 1.5);
 
@@ -259,7 +308,6 @@ const DeliveryDepot: React.FC = () => {
         }
       });
 
-      console.log('Dépôts chargés:', JSON.stringify(depotsArray, null, 2));
       setDepots(depotsArray);
       setSelectedDepot(depotsArray[0]);
 
@@ -284,7 +332,7 @@ const DeliveryDepot: React.FC = () => {
     fetchDepots(true);
   }, [villeNom, jour]);
 
-  // Rendu du header
+  // Render functions
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity 
@@ -303,7 +351,6 @@ const DeliveryDepot: React.FC = () => {
     </View>
   );
 
-  // Rendu de la carte
   const renderMap = () => {
     if (!selectedDepot || depots.length === 0) return null;
 
@@ -320,10 +367,20 @@ const DeliveryDepot: React.FC = () => {
             <Marker
               key={index}
               coordinate={depot.coordonnées}
-              title={depot.adresse}
-              description={depot.horaire}
-              pinColor={depot === selectedDepot ? "blue" : "red"}
-            />
+              tracksViewChanges={false}
+              onPress={() => setSelectedDepot(depot)}
+            >
+              <NumberedMarker
+                number={index + 1}
+                isSelected={depot === selectedDepot}
+              />
+              <Callout>
+                <View style={styles.calloutContainer}>
+                  <Text style={styles.calloutText}>{depot.adresse}</Text>
+                  <Text style={styles.calloutText}>{depot.horaire}</Text>
+                </View>
+              </Callout>
+            </Marker>
           ))}
           {depots.length > 1 && (
             <Polyline
@@ -337,11 +394,12 @@ const DeliveryDepot: React.FC = () => {
     );
   };
 
-  // Rendu des informations du dépôt
   const renderDepotInfo = () => (
     <View style={styles.depotInfo}>
       <Text style={styles.depotTitle}>Point de dépôt</Text>
-      <Text style={styles.depotAddress}>{selectedDepot?.adresse}</Text>
+      <Text style={styles.depotAddress}>
+        {depots.findIndex(d => d === selectedDepot) + 1}. {selectedDepot?.adresse}
+      </Text>
       <Text style={styles.depotHoraire}>Horaire: {selectedDepot?.horaire}</Text>
       {selectedDepot?.num_depot && (
         <Text style={styles.depotNumbers}>
@@ -351,7 +409,6 @@ const DeliveryDepot: React.FC = () => {
     </View>
   );
 
-  // Gestion des états de chargement et d'erreur
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -377,7 +434,6 @@ const DeliveryDepot: React.FC = () => {
     );
   }
 
-  // Rendu principal
   return (
     <View style={styles.container}>
       {renderHeader()}
@@ -405,7 +461,9 @@ const DeliveryDepot: React.FC = () => {
                   style={styles.depotCard}
                   onPress={() => setSelectedDepot(depot)}
                 >
-                  <Text style={styles.depotAddress}>{depot.adresse}</Text>
+                  <Text style={styles.depotAddress}>
+                    {index + 1}. {depot.adresse}
+                  </Text>
                   <Text style={styles.depotHoraire}>{depot.horaire}</Text>
                 </TouchableOpacity>
               ) : null
