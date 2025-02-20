@@ -211,7 +211,7 @@ const PanierRecap = () => {
   const renderPaniersList = () => (
     <View className="my-4">
       {paniers.map((panier) => (
-        <View key={panier.id} className="bg-white p-4 rounded-lg mb-3 shadow-md">
+        <View key={panier.id} className="bg-white p-4 rounded-lg mb-3 shadow-sm shadow-blue-500/50 ...">
           <View className="flex-row justify-between items-start mb-3">
             <Text className="text-lg font-semibold text-gray-800 flex-1">
               {panier.adresse}

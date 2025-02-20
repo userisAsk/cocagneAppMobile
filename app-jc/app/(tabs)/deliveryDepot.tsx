@@ -8,9 +8,8 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  Dimensions,
 } from "react-native";
-import MapView, { Marker, Polyline, Region, Callout } from "react-native-maps";
+import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../../FirebaseConfig";
@@ -27,26 +26,8 @@ interface Depot {
   horaire: string;
   coordonnées: Coordinates;
   num_depot: string[];
+  ordre?: number; // Nouvel attribut pour l'ordre
 }
-
-interface VilleDepots {
-  [key: string]: {
-    [key: string]: Depot;
-  };
-}
-
-// Composant de marqueur numéroté
-const NumberedMarker: React.FC<{
-  number: number;
-  isSelected: boolean;
-}> = ({ number, isSelected }) => (
-  <View style={[
-    styles.markerContainer,
-    isSelected ? styles.selectedMarker : styles.normalMarker
-  ]}>
-    <Text style={styles.markerText}>{number}</Text>
-  </View>
-);
 
 // Styles
 const styles = StyleSheet.create({
@@ -93,34 +74,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  markerContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "white",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  selectedMarker: {
-    backgroundColor: "#3B82F6",
-  },
-  normalMarker: {
-    backgroundColor: "#EF4444",
-  },
-  markerText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
   depotInfo: {
     margin: 16,
     padding: 16,
@@ -155,10 +108,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
   },
-  otherDepotsContainer: {
+  nextDepotContainer: {
     margin: 16,
   },
-  otherDepotsTitle: {
+  nextDepotTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
@@ -208,14 +161,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  calloutContainer: {
-    padding: 8,
-    minWidth: 150,
+  markerContainer: {
+    width: 30,
+    height: 30,
+    backgroundColor: "#3B82F6",
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "white",
   },
-  calloutText: {
+  selectedMarkerContainer: {
+    backgroundColor: "#2563EB",
+    borderColor: "#FBBF24",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  markerText: {
+    color: "white",
+    fontWeight: "bold",
     fontSize: 14,
-    color: "#4B5563",
-    marginBottom: 4,
+  },
+  scanButton: {
+    backgroundColor: "#3B82F6",
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 
@@ -252,7 +227,7 @@ const DeliveryDepot: React.FC = () => {
   const calculateRegion = (depotsArray: Depot[]): Region => {
     if (depotsArray.length === 0) {
       return {
-        latitude: 46.603354,
+        latitude: 46.603354,  // Centre de la France
         longitude: 1.888334,
         latitudeDelta: 10,
         longitudeDelta: 10,
@@ -268,6 +243,7 @@ const DeliveryDepot: React.FC = () => {
     const centerLat = (minLat + maxLat) / 2;
     const centerLng = (minLng + maxLng) / 2;
     
+    // Ajouter une marge pour une meilleure visualisation
     const latDelta = Math.max(0.02, (maxLat - minLat) * 1.5);
     const lngDelta = Math.max(0.02, (maxLng - minLng) * 1.5);
 
@@ -278,6 +254,7 @@ const DeliveryDepot: React.FC = () => {
       longitudeDelta: lngDelta,
     };
   };
+
 
   const fetchDepots = async (ignoreCache = false) => {
     try {
@@ -296,18 +273,22 @@ const DeliveryDepot: React.FC = () => {
         throw new Error(`Aucun dépôt trouvé pour ${villeNom}`);
       }
 
-      const depotsArray = Object.values(villeDepots).map((depot: any) => {
-        try {
-          return {
-            ...depot,
-            coordonnées: validateCoordinates(depot.coordonnées),
-          };
-        } catch (e) {
-          console.error(`Erreur de validation des coordonnées pour ${depot.adresse}:`, e);
-          throw e;
-        }
-      });
+      // Transformer en tableau avec ordre
+      const depotsArray = Object.entries(villeDepots)
+  .map(([key, depot]: [string, any]) => {
+    try {
+      return {
+        ...depot,
+        coordonnées: validateCoordinates(depot.coordonnées),
+      };
+    } catch (e) {
+      console.error(`Erreur de validation des coordonnées pour ${depot.adresse}:`, e);
+      throw e;
+    }
+  })
+  .sort((a, b) => a.ordre - b.ordre);
 
+      console.log('Dépôts chargés:', JSON.stringify(depotsArray, null, 2));
       setDepots(depotsArray);
       setSelectedDepot(depotsArray[0]);
 
@@ -332,7 +313,34 @@ const DeliveryDepot: React.FC = () => {
     fetchDepots(true);
   }, [villeNom, jour]);
 
-  // Render functions
+  // Trouver le prochain dépôt
+  const getNextDepot = (currentDepot: Depot | null): Depot | null => {
+    if (!currentDepot || depots.length <= 1) return null;
+    
+    const currentIndex = depots.findIndex(d => d.ordre === currentDepot.ordre);
+    if (currentIndex === -1 || currentIndex === depots.length - 1) return null;
+    
+    return depots[currentIndex + 1];
+  };
+
+  // Composant pour le marqueur personnalisé
+  const CustomMarker = ({ depot, isSelected }: { depot: Depot, isSelected: boolean }) => (
+    <Marker
+      coordinate={depot.coordonnées}
+      title={`${depot.ordre}. ${depot.adresse}`}
+      description={depot.horaire}
+      tracksViewChanges={false}
+    >
+      <View style={[
+        styles.markerContainer,
+        isSelected && styles.selectedMarkerContainer
+      ]}>
+        <Text style={styles.markerText}>{depot.ordre}</Text>
+      </View>
+    </Marker>
+  );
+
+  // Rendu du header
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity 
@@ -351,10 +359,12 @@ const DeliveryDepot: React.FC = () => {
     </View>
   );
 
+  // Rendu de la carte
   const renderMap = () => {
     if (!selectedDepot || depots.length === 0) return null;
 
     const region = calculateRegion(depots);
+    const nextDepot = getNextDepot(selectedDepot);
 
     return (
       <View style={styles.mapContainer}>
@@ -363,28 +373,18 @@ const DeliveryDepot: React.FC = () => {
           initialRegion={region}
           onMapReady={() => setMapReady(true)}
         >
-          {depots.map((depot, index) => (
-            <Marker
-              key={index}
-              coordinate={depot.coordonnées}
-              tracksViewChanges={false}
-              onPress={() => setSelectedDepot(depot)}
-            >
-              <NumberedMarker
-                number={index + 1}
-                isSelected={depot === selectedDepot}
-              />
-              <Callout>
-                <View style={styles.calloutContainer}>
-                  <Text style={styles.calloutText}>{depot.adresse}</Text>
-                  <Text style={styles.calloutText}>{depot.horaire}</Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-          {depots.length > 1 && (
+          {/* Marqueur pour le dépôt sélectionné */}
+          <CustomMarker depot={selectedDepot} isSelected={true} />
+          
+          {/* Marqueur pour le prochain dépôt (si disponible) */}
+          {nextDepot && (
+            <CustomMarker depot={nextDepot} isSelected={false} />
+          )}
+          
+          {/* Ligne reliant le dépôt courant au suivant */}
+          {nextDepot && (
             <Polyline
-              coordinates={depots.map(depot => depot.coordonnées)}
+              coordinates={[selectedDepot.coordonnées, nextDepot.coordonnées]}
               strokeColor="#3B82F6"
               strokeWidth={2}
             />
@@ -394,12 +394,11 @@ const DeliveryDepot: React.FC = () => {
     );
   };
 
+  // Rendu des informations du dépôt
   const renderDepotInfo = () => (
     <View style={styles.depotInfo}>
-      <Text style={styles.depotTitle}>Point de dépôt</Text>
-      <Text style={styles.depotAddress}>
-        {depots.findIndex(d => d === selectedDepot) + 1}. {selectedDepot?.adresse}
-      </Text>
+      <Text style={styles.depotTitle}>Point de dépôt #{selectedDepot?.ordre}</Text>
+      <Text style={styles.depotAddress}>{selectedDepot?.adresse}</Text>
       <Text style={styles.depotHoraire}>Horaire: {selectedDepot?.horaire}</Text>
       {selectedDepot?.num_depot && (
         <Text style={styles.depotNumbers}>
@@ -409,6 +408,55 @@ const DeliveryDepot: React.FC = () => {
     </View>
   );
 
+  // Rendu du prochain dépôt
+  const renderNextDepot = () => {
+    const nextDepot = getNextDepot(selectedDepot);
+    if (!nextDepot) return null;
+
+    return (
+      <View style={styles.nextDepotContainer}>
+        <Text style={styles.nextDepotTitle}>
+          Prochain point de dépôt
+        </Text>
+        <TouchableOpacity
+          style={styles.depotCard}
+          onPress={() => setSelectedDepot(nextDepot)}
+        >
+          <Text style={styles.depotTitle}>Point #{nextDepot.ordre}</Text>
+          <Text style={styles.depotAddress}>{nextDepot.adresse}</Text>
+          <Text style={styles.depotHoraire}>{nextDepot.horaire}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const handleScanPress = () => {
+    if (selectedDepot && selectedDepot.num_depot) {
+      // Affichage du depotId dans la console
+      console.log("Depot ID:", selectedDepot.num_depot[0]);
+
+      router.push({
+        pathname: "/(tabs)/scanValidation",
+        params: { 
+          depotId: selectedDepot.num_depot[0],
+          villeNom: villeNom,
+          jour: jour
+        }
+      });
+    } else {
+      Alert.alert("Erreur", "Impossible de scanner ce dépôt");
+    }
+};
+
+
+  const renderScanButton = () => (
+    <TouchableOpacity style={styles.scanButton} onPress={handleScanPress}>
+      <Ionicons name="qr-code-outline" size={24} color="white" />
+      <Text style={styles.scanButton}>Scanner le QR code</Text>
+    </TouchableOpacity>
+  );
+
+  // Gestion des états de chargement et d'erreur
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -434,6 +482,7 @@ const DeliveryDepot: React.FC = () => {
     );
   }
 
+  // Rendu principal
   return (
     <View style={styles.container}>
       {renderHeader()}
@@ -448,28 +497,8 @@ const DeliveryDepot: React.FC = () => {
       >
         {renderMap()}
         {selectedDepot && renderDepotInfo()}
-
-        {depots.length > 1 && (
-          <View style={styles.otherDepotsContainer}>
-            <Text style={styles.otherDepotsTitle}>
-              Autres points de dépôt
-            </Text>
-            {depots.map((depot, index) =>
-              depot !== selectedDepot ? (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.depotCard}
-                  onPress={() => setSelectedDepot(depot)}
-                >
-                  <Text style={styles.depotAddress}>
-                    {index + 1}. {depot.adresse}
-                  </Text>
-                  <Text style={styles.depotHoraire}>{depot.horaire}</Text>
-                </TouchableOpacity>
-              ) : null
-            )}
-          </View>
-        )}
+        {selectedDepot && renderScanButton()}
+        {renderNextDepot()}
       </ScrollView>
     </View>
   );
