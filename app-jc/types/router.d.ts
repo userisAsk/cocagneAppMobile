@@ -17,7 +17,8 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownInputParams; } |
-        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownInputParams; } | // Ajout ici
+        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownInputParams; } |
+        { pathname: `${'/(tabs)'}/basketScanValidation`; params?: Router.UnknownInputParams; } | // Ajout ici
         { pathname: `/+not-found`, params: Router.UnknownInputParams & { } };
       
       hrefOutputParams: 
@@ -31,7 +32,8 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownOutputParams; } |
-        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownOutputParams; } | // Ajout ici
+        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownOutputParams; } |
+        { pathname: `${'/(tabs)'}/basketScanValidation`; params?: Router.UnknownOutputParams; } | // Ajout ici
         { pathname: `/+not-found`, params: Router.UnknownOutputParams & { } };
       
       href: 
@@ -53,7 +55,8 @@ declare module 'expo-router' {
         `/panierRecap${`?${string}` | `#${string}` | ''}` | 
         `${'/(tabs)'}/deliveryDepot${`?${string}` | `#${string}` | ''}` | 
         `/deliveryDepot${`?${string}` | `#${string}` | ''}` |
-        `${'/(tabs)'}/scanValidation${`?${string}` | `#${string}` | ''}` | // Ajout ici
+        `${'/(tabs)'}/scanValidation${`?${string}` | `#${string}` | ''}` |
+        `${'/(tabs)'}/basketScanValidation${`?${string}` | `#${string}` | ''}` | // Ajout ici
         { pathname: Router.RelativePathString, params?: Router.UnknownInputParams } | 
         { pathname: Router.ExternalPathString, params?: Router.UnknownInputParams } | 
         { pathname: `/../FirebaseConfig`; params?: Router.UnknownInputParams; } | 
@@ -64,7 +67,8 @@ declare module 'expo-router' {
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/deliveryDepot` | `/deliveryDepot`; params?: Router.UnknownInputParams; } |
-        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownInputParams; } | // Ajout ici
+        { pathname: `${'/(tabs)'}/scanValidation`; params?: Router.UnknownInputParams; } |
+        { pathname: `${'/(tabs)'}/basketScanValidation`; params?: Router.UnknownInputParams; } | // Ajout ici
         `/+not-found` | 
         { pathname: `/+not-found`, params: Router.UnknownInputParams & { } };
     }

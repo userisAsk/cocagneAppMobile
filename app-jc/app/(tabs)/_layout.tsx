@@ -8,6 +8,7 @@ const Layout = () => {
       <Stack.Screen name="panierRecap" />
       <Stack.Screen name="deliveryDepot" />
       <Stack.Screen name="scanValidation" />
+      <Stack.Screen name="basketScanValidation" />
     </Stack>
   );
 };
