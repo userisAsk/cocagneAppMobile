@@ -12,7 +12,7 @@ declare module 'expo-router' {
         { pathname: `/../FirebaseConfig`; params?: Router.UnknownInputParams; } | 
         { pathname: `/_sitemap`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(auth)'}/login` | `${'/(auth)'}/clientLogin` | `${'/(auth)'}/livreurLogin` | `${'/(auth)'}/chooseRole` | `/login`; params?: Router.UnknownInputParams; } | 
-        { pathname: `${'/(tabs)'}/home` | `/home`; params?: Router.UnknownInputParams; } | 
+        { pathname: `${'/(tabs)'}/home` | `${'/(tabs)'}/homeClient` | `/home`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 
@@ -27,7 +27,7 @@ declare module 'expo-router' {
         { pathname: `/../FirebaseConfig`; params?: Router.UnknownOutputParams; } | 
         { pathname: `/_sitemap`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(auth)'}/login` | `${'/(auth)'}/clientLogin` | `${'/(auth)'}/livreurLogin` | `${'/(auth)'}/chooseRole` | `/login`; params?: Router.UnknownOutputParams; } | 
-        { pathname: `${'/(tabs)'}/home` | `/home`; params?: Router.UnknownOutputParams; } | 
+        { pathname: `${'/(tabs)'}/home` | `${'/(tabs)'}/homeClient` | `/home`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownOutputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownOutputParams; } | 
@@ -46,6 +46,7 @@ declare module 'expo-router' {
         `${'/(auth)'}/chooseRole${`?${string}` | `#${string}` | ''}` | 
         `/login${`?${string}` | `#${string}` | ''}` | 
         `${'/(tabs)'}/home${`?${string}` | `#${string}` | ''}` | 
+        `${'/(tabs)'}/homeClient${`?${string}` | `#${string}` | ''}` | 
         `/home${`?${string}` | `#${string}` | ''}` | 
         `${'/(tabs)'}${`?${string}` | `#${string}` | ''}` | 
         `/${`?${string}` | `#${string}` | ''}` | 
@@ -62,7 +63,7 @@ declare module 'expo-router' {
         { pathname: `/../FirebaseConfig`; params?: Router.UnknownInputParams; } | 
         { pathname: `/_sitemap`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(auth)'}/login` | `${'/(auth)'}/clientLogin` | `${'/(auth)'}/livreurLogin` | `${'/(auth)'}/chooseRole` | `/login`; params?: Router.UnknownInputParams; } | 
-        { pathname: `${'/(tabs)'}/home` | `/home`; params?: Router.UnknownInputParams; } | 
+        { pathname: `${'/(tabs)'}/home` | `${'/(tabs)'}/homeClient` | `/home`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}` | `/`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/profile` | `/profile`; params?: Router.UnknownInputParams; } | 
         { pathname: `${'/(tabs)'}/panierRecap` | `/panierRecap`; params?: Router.UnknownInputParams; } | 

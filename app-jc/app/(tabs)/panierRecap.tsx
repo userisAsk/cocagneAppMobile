@@ -17,6 +17,7 @@ interface PanierData {
   statut: string;
   ville: string;
   adresse: string;
+  nomadd: string;
   tourneeid: string;
   commentaire?: string;
 }
@@ -65,6 +66,7 @@ const PanierRecap = () => {
             statut: data.statut || "En attente",
             ville: data.ville,
             adresse: data.adresse || "Adresse non spécifiée",
+            nomadd: data.nomadd,
             tourneeid: data.tourneeid,
             commentaire: data.commentaire,
           };
@@ -214,7 +216,7 @@ const PanierRecap = () => {
         <View key={panier.id} className="bg-white p-4 rounded-lg mb-3 shadow-sm shadow-blue-500/50 ...">
           <View className="flex-row justify-between items-start mb-3">
             <Text className="text-lg font-semibold text-gray-800 flex-1">
-              {panier.adresse}
+              {panier.nomadd}
             </Text>
             {renderStatusButton(panier)}
           </View>

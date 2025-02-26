@@ -14,6 +14,8 @@ import { auth, db } from "../../FirebaseConfig";
 import { Link, router } from "expo-router";
 import { Eye, EyeOff } from "lucide-react-native";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { registerForPushNotifications } from '../service/notificationService'; 
+
 
 const DecorativeShapes = () => {
   return (
@@ -33,22 +35,36 @@ const BottomDecorativeShape = () => {
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
+  const [prenom, setPrenom] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const signIn = async () => {
     try {
-      // Essayer de se connecter avec Firebase
+      // Connexion avec Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Vérification si l'utilisateur existe dans la collection Client
+      // Recherche du client par email
       const clientsRef = collection(db, "Client");
       const clientQuery = query(clientsRef, where("email", "==", email));
       const clientSnapshot = await getDocs(clientQuery);
-
-      // Si l'utilisateur est un Client
+  
       if (!clientSnapshot.empty) {
-        router.replace("/(tabs)/home");
+        const clientDoc = clientSnapshot.docs[0];
+        const clientDocId = clientDoc.id; // Récupérer l'ID du document client
+        
+        console.log("Client document ID:", clientDocId); // Pour déboguer
+        
+        // Enregistrer pour les notifications en passant l'ID du document client
+        await registerForPushNotifications(clientDocId);
+        
+        router.replace({
+          pathname: "/(tabs)/homeClient",
+          params: { 
+            email, 
+            prenom
+           },
+        });        
       } else {
         // Si l'utilisateur n'est pas un Client, vérifier s'il est un Livreur
         const livreursRef = collection(db, "Livreur");

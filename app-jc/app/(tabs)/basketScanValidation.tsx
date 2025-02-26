@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { db } from '../../FirebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useLocalSearchParams, router } from 'expo-router';
+import { sendDeliveryNotifications } from '../service/notificationService'; 
+
 
 interface Panier {
   id: string;
@@ -25,9 +27,14 @@ interface Panier {
   panierCode: {
     codeFamilial: number | null;
     codeSimple: number | null;
+    codeoeuf: number | null;
   };
   statut: string;
   adresse: string;
+}
+interface Depot {
+  num_depot: number[];
+  ordre: number;
 }
 
 interface PanierItem {
@@ -113,7 +120,7 @@ const BasketScanValidation: React.FC = () => {
         items.push({
           type: 'oeuf',
           quantity: currentPanier.panier.oeuf,
-          code: null, // Assuming eggs don't have a code
+          code: currentPanier.panierCode?.codeoeuf || null, // Assuming eggs don't have a code
           scannedCount: 0 // Initialize with 0 scanned
         });
       }
@@ -249,7 +256,8 @@ const BasketScanValidation: React.FC = () => {
         // Check both possible field names for the codes
         const panierCodes = {
           codeFamilial: data.panierCode?.codeFamilial || data.codeFamilial || null,
-          codeSimple: data.panierCode?.codeSimple || data.codeSimple || null
+          codeSimple: data.panierCode?.codeSimple || data.codeSimple || null,
+          codeoeuf: data.panierCode?.codeoeuf || data.codeoeuf || null
         };
   
         // Convert codes to numbers if they exist
@@ -289,6 +297,9 @@ const BasketScanValidation: React.FC = () => {
       setLoading(false);
     }
   };
+  
+
+
 
   const startScanning = (type: 'familial' | 'simple' | 'oeuf') => {
     scannedRef.current = false; // 🔄 Réinitialiser le scan pour le nouveau panier
@@ -390,27 +401,182 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
     }
   };
 
+  const updateAllBasketsStatus = async () => {
+    try {
+      // Show loading or disable buttons while updating
+      setLoading(true);
+      
+      if (!currentPanier) {
+        throw new Error("Aucun panier à mettre à jour");
+      }
+      
+      // Use Promise.all to update all baskets in parallel
+      const updatePromises = paniers.map(panier => 
+        updateBasketStatus(panier.id, "Livré")
+      );
+      
+      await Promise.all(updatePromises);
+      
+      console.log(`✅ Tous les paniers (${paniers.length}) ont été marqués comme livrés`);
+      Alert.alert("Succès", "Tous les paniers ont été marqués comme livrés");
+      
+      return true;
+    } catch (error) {
+      console.error("❌ Erreur lors de la mise à jour des statuts:", error);
+      Alert.alert(
+        "Erreur", 
+        error instanceof Error 
+          ? `Erreur: ${error.message}` 
+          : "Erreur inconnue lors de la mise à jour"
+      );
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
   
 
-  const navigateToNextDepot = () => {
-    router.push({
-      pathname: "/(tabs)/deliveryDepot",
-      params: { villeNom, jour }
-    });
-  };
-
-  const skipBasket = () => {
-    if (!currentPanier || paniers.length <= 1) return;
+  const navigateToNextDepot = async () => {
+    console.log("---- Début navigateToNextDepot ----");
+    console.log(`Paramètres initiaux: depotId=${depotId}, jour=${jour}, villeNom=${villeNom}`);
     
-    // Passer au prochain panier
-    const updatedPaniers = [...paniers.filter(p => p.id !== currentPanier.id), currentPanier];
-    setPaniers(updatedPaniers);
-    setCurrentPanier(updatedPaniers[0]);
+    if (!allScanned) {
+      console.log("Validation échouée: tous les paniers ne sont pas scannés");
+      Alert.alert("Validation incomplète", "Veuillez scanner tous les paniers avant de continuer.");
+      return;
+    }
+    
+    // First update all basket statuses
+    console.log("Tentative de mise à jour des statuts des paniers...");
+    const success = await updateAllBasketsStatus();
+    console.log(`Mise à jour des statuts: ${success ? "Réussie" : "Échouée"}`);
+    if (!success) {
+      Alert.alert("Erreur", "Échec de la mise à jour des statuts des paniers.");
+      return;
+    }
 
-    // Réinitialiser l'état du scan
-    scannedRef.current = false; 
-    setScanDisabled(false); 
-};
+    try {
+      // This should be called after successful update of basket statuses
+      await sendDeliveryNotifications(depotId, jour, villeNom);
+    } catch (error) {
+      console.error("Erreur lors de l'envoi des notifications:", error);
+      // Don't stop the process if notifications fail
+    }
+    
+    try {
+      if (!depotId || !jour || !villeNom) {
+        console.log(`Paramètres manquants: depotId=${depotId}, jour=${jour}, villeNom=${villeNom}`);
+        throw new Error("Paramètres manquants : depotId, jour ou villeNom.");
+      }
+      
+      if (typeof jour !== 'string' || typeof villeNom !== 'string' || typeof depotId !== 'string') {
+        console.log(`Types des paramètres: depotId=${typeof depotId}, jour=${typeof jour}, villeNom=${typeof villeNom}`);
+        throw new Error("Paramètres manquants ou invalides");
+      }
+      
+      // Récupérer les informations du dépôt actuel depuis Firestore
+      console.log(`Récupération des données pour tournee/${jour.toLowerCase()}`);
+      const tourneeRef = doc(db, "Tournee", jour.toLowerCase());
+      const tourneeSnap = await getDoc(tourneeRef);
+      
+      if (!tourneeSnap.exists()) {
+        console.log("Document tournée non trouvé dans Firestore");
+        throw new Error("Données de tournée non trouvées");
+      }
+      
+      const tourneeData = tourneeSnap.data();
+      console.log("Données tournée récupérées:", JSON.stringify(tourneeData, null, 2));
+      
+      const villesData = tourneeData.villes;
+      console.log(`Données ville ${villeNom} disponibles:`, villesData[villeNom] ? "Oui" : "Non");
+      
+      if (!villesData[villeNom]) {
+        console.log(`Données pour la ville ${villeNom} introuvables dans:`, Object.keys(villesData));
+        throw new Error(`Données pour la ville ${villeNom} introuvables`);
+      }
+      
+      // Rechercher le dépôt correspondant à depotId
+      let currentDepotOrdre = null;
+      let found = false;
+      let depotDetails = null;
+      
+      console.log(`Recherche du dépôt avec ID: ${depotId}`);
+      console.log(`Nombre de dépôts dans ${villeNom}:`, Object.keys(villesData[villeNom]).length);
+      
+      // Log tous les dépôts pour cette ville
+      Object.entries(villesData[villeNom]).forEach(([key, depot]: [string, any]) => {
+        console.log(`Dépôt ${key}:`, {
+          num_depot: depot.num_depot,
+          ordre: depot.ordre
+        });
+      });
+      
+      // Convertir depotId en nombre pour la comparaison
+      const depotIdNumber = parseInt(depotId, 10);
+      console.log(`Recherche avec depotId converti en nombre: ${depotIdNumber}`);
+      
+      Object.values(villesData[villeNom]).forEach((depot: any) => {
+        console.log(`Vérification du dépôt:`, {
+          num_depot: depot.num_depot,
+          ordre: depot.ordre
+        });
+        
+        // Vérifier si le tableau num_depot contient le nombre depotIdNumber
+        if (depot.num_depot && depot.num_depot.includes(depotIdNumber)) {
+          currentDepotOrdre = depot.ordre;
+          depotDetails = depot;
+          found = true;
+          console.log(`Dépôt trouvé! Ordre: ${currentDepotOrdre}`);
+        }
+      });
+      
+      if (!found || currentDepotOrdre === null) {
+        console.log("Dépôt non trouvé ou ordre non défini");
+        throw new Error("Impossible de déterminer l'ordre du dépôt actuel");
+      }
+      
+      // Calculer l'ordre du prochain dépôt
+      const nextDepotOrdre = currentDepotOrdre + 1;
+      
+      console.log(`Dépôt actuel: #${currentDepotOrdre}, Navigation vers le dépôt #${nextDepotOrdre}`);
+      console.log(`Paramètres de navigation: villeNom=${villeNom}, jour=${jour}, depotOrdre=${nextDepotOrdre}`);
+      
+      // Vérifier si le dépôt avec cet ordre existe
+      let nextDepotExists = false;
+      Object.values(villesData[villeNom]).forEach((depot: any) => {
+        if (depot.ordre === nextDepotOrdre) {
+          nextDepotExists = true;
+          console.log(`Le prochain dépôt (ordre ${nextDepotOrdre}) existe:`, depot);
+        }
+      });
+      
+      if (!nextDepotExists) {
+        console.log(`Attention: Aucun dépôt avec l'ordre ${nextDepotOrdre} n'a été trouvé`);
+      }
+      
+      router.push({
+        pathname: "/(tabs)/deliveryDepot",
+        params: {
+          villeNom,
+          jour,
+          depotOrdre: nextDepotOrdre.toString(),
+        }
+      });
+      
+      console.log("Navigation initiée avec succès");
+    } catch (error) {
+      console.error("Erreur détaillée lors de la navigation:", error);
+      Alert.alert("Erreur", "Impossible de déterminer le prochain dépôt.");
+      router.push({
+        pathname: "/(tabs)/deliveryDepot",
+        params: { villeNom, jour }
+      });
+    }
+    console.log("---- Fin navigateToNextDepot ----");
+  };
+             
+             
+
 
 
   if (hasPermission === null) {
@@ -478,7 +644,7 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
                   </View>
                 </View>
                 
-                {item.type !== 'oeuf' && (
+                
                   <TouchableOpacity
                     style={[
                       styles.scanItemButton,
@@ -502,7 +668,7 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
                           : 'Scanner'}
                     </Text>
                   </TouchableOpacity>
-                )}
+  
               </View>
             ))}
           </View>
@@ -510,27 +676,27 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
       )}
 
       {/* Remaining baskets counter */}
-<View style={styles.counterContainer}>
-  <Text style={styles.counterText}>
-    {panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0)} 
-    {" "}panier{panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0) > 1 ? 's' : ''} restant{panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0) > 1 ? 's' : ''}
-  </Text>
-</View>
+      <View style={styles.counterContainer}>
+        <Text style={styles.counterText}>
+          {panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0)} 
+          {" "}panier{panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0) > 1 ? 's' : ''} restant{panierItems.reduce((total, item) => total + (item.quantity - item.scannedCount), 0) > 1 ? 's' : ''}
+        </Text>
+      </View>
 
 
 
       {/* Action Buttons */}
-      <TouchableOpacity 
-  style={[
-    styles.skipButton, 
-    allScanned ? styles.nextClientButtonActive : styles.nextClientButtonInactive
-  ]}
-  onPress={allScanned ? navigateToNextDepot : undefined} 
-  disabled={!allScanned} 
->
-  <Ionicons name="play-skip-forward" size={24} color="white" />
-  <Text style={styles.buttonText}>Passer au client suivant</Text>
-</TouchableOpacity>
+      <TouchableOpacity
+      style={[
+        styles.skipButton, 
+        allScanned ? styles.nextClientButtonActive : styles.nextClientButtonInactive
+      ]}
+      onPress={allScanned ? navigateToNextDepot : undefined} 
+      disabled={!allScanned}
+    >
+      <Ionicons name="play-skip-forward" size={24} color="white" />
+      <Text style={styles.buttonText}>Passer au depot suivant</Text>
+    </TouchableOpacity>
 
 
 
