@@ -144,6 +144,7 @@ export const registerForPushNotifications = async (clientDocId) => {
   try {
     console.log("Attempting to register notifications for client ID:", clientDocId);
     
+    
     // Check permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;

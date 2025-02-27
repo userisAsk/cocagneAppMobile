@@ -7,6 +7,9 @@ import { collection, query, where, getDocs, onSnapshot, orderBy, QueryDocumentSn
 import { registerForPushNotifications } from '../service/notificationService';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+// Importez la variable isLoggingOut depuis Profile
+// Assurez-vous que le chemin d'importation est correct selon votre structure de projet
+import { isLoggingOut } from '..//(tabs)/profile'; // Ajustez ce chemin
 
 // Define proper types for notifications
 interface NotificationItem {
@@ -23,6 +26,9 @@ const HomeClient = () => {
   const [prenom, setPrenom] = useState<string>('Utilisateur');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  // Référence pour stocker la fonction de nettoyage du listener Firestore
+  const unsubscribeRef = useRef<(() => void) | null>(null);
   
   // Fetch user's first name on component mount
   useEffect(() => {
@@ -54,7 +60,17 @@ const HomeClient = () => {
 
   // Notification setup effect
   useEffect(() => {
-    let unsubscribeFromNotifications: (() => void) | null = null;
+    let notificationListener: Notifications.Subscription;
+    let responseListener: Notifications.Subscription;
+    
+    // Vérifier périodiquement si l'utilisateur est en cours de déconnexion
+    const authCheckInterval = setInterval(() => {
+      if (isLoggingOut && unsubscribeRef.current) {
+        console.log("Détection de déconnexion, nettoyage des listeners");
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    }, 100);
     
     // Register for push notifications if needed
     const setupNotifications = async () => {
@@ -72,7 +88,10 @@ const HomeClient = () => {
             await registerForPushNotifications(clientDoc.id);
             
             // Fetch recent notifications for this client
-            unsubscribeFromNotifications = fetchNotifications(clientDoc.id);
+            const unsubscribe = fetchNotifications(clientDoc.id);
+            if (unsubscribe) {
+              unsubscribeRef.current = unsubscribe;
+            }
           }
         }
       } catch (error) {
@@ -94,42 +113,76 @@ const HomeClient = () => {
         );
         
         // Set up real-time listener for notifications
-        const unsubscribe = onSnapshot(notificationQuery, (snapshot) => {
-          const notificationList: NotificationItem[] = [];
-          snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
-            notificationList.push({
-              id: doc.id,
-              ...doc.data()
-            } as NotificationItem);
-          });
-          setNotifications(notificationList);
-          setLoading(false);
-        });
+        const unsubscribe = onSnapshot(notificationQuery, 
+          // Callback pour les données
+          (snapshot) => {
+            if (isLoggingOut) {
+              // Ne pas mettre à jour l'état si la déconnexion est en cours
+              console.log("Réception de données ignorée car déconnexion en cours");
+              return;
+            }
+            
+            const notificationList: NotificationItem[] = [];
+            snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+              notificationList.push({
+                id: doc.id,
+                ...doc.data()
+              } as NotificationItem);
+            });
+            setNotifications(notificationList);
+            setLoading(false);
+          }, 
+          // Callback pour les erreurs
+          (error) => {
+            // Gestion spécifique des erreurs d'autorisation
+            if (error.code === 'permission-denied') {
+              console.log("Permission denied - user likely signed out");
+              // Nettoyer le listener en cas d'erreur d'autorisation
+              if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+              }
+            } else {
+              console.error("Error in notification listener:", error);
+            }
+          }
+        );
         
         return unsubscribe;
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("Error setting up notification listener:", error);
         setLoading(false);
         return null;
       }
     };
 
     // Listen for incoming notifications
-    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+    notificationListener = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received in HomeClient:', notification);
     });
 
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+    responseListener = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('Notification tapped in HomeClient:', response);
     });
 
-    // Call the async function, don't try to use its return value directly
+    // Call the async function
     setupNotifications();
 
     // Clean up listeners when component unmounts
     return () => {
+      // Nettoyage des listeners de notifications
       Notifications.removeNotificationSubscription(notificationListener);
       Notifications.removeNotificationSubscription(responseListener);
+      
+      // Nettoyage de l'intervalle de vérification
+      clearInterval(authCheckInterval);
+      
+      // Nettoyage du listener Firestore
+      if (unsubscribeRef.current) {
+        console.log("Nettoyage du listener Firestore au démontage du composant");
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
     };
   }, []);
 

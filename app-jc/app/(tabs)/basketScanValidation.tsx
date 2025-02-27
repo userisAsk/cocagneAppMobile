@@ -263,7 +263,8 @@ const BasketScanValidation: React.FC = () => {
         // Convert codes to numbers if they exist
         if (panierCodes.codeFamilial) panierCodes.codeFamilial = Number(panierCodes.codeFamilial);
         if (panierCodes.codeSimple) panierCodes.codeSimple = Number(panierCodes.codeSimple);
-  
+        if (panierCodes.codeoeuf) panierCodes.codeoeuf = Number(panierCodes.codeoeuf);
+
         // Log the extracted codes for debugging
         console.log(`Basket codes extracted - Familial: ${panierCodes.codeFamilial}, Simple: ${panierCodes.codeSimple}`);
   
@@ -326,7 +327,9 @@ const BasketScanValidation: React.FC = () => {
         ? currentPanier.panierCode?.codeFamilial 
         : currentScanType === 'simple' 
             ? currentPanier.panierCode?.codeSimple 
-            : null;
+            : currentScanType === 'oeuf'
+                ? currentPanier.panierCode?.codeoeuf  // Vérifier le code des œufs
+                : null;
 
     if (expectedCode === null) {
         Alert.alert("Erreur", `Le panier ${currentScanType} n'a pas de code QR associé.`);

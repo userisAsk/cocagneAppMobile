@@ -14,13 +14,46 @@ interface Utilisateur {
   isClient?: boolean;
 }
 
+// Variable globale pour suivre l'état de déconnexion
+// Cela permettra à d'autres composants de vérifier cet état
+export let isLoggingOut = false;
+
 const handleLogout = async () => {
   const auth = getAuth();
   try {
+    // Marquer que la déconnexion est en cours
+    isLoggingOut = true;
+    
+    // Attendre un court instant pour laisser le temps aux listeners de vérifier l'état
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Déconnexion
     await signOut(auth);
-    router.replace("/"); // Redirection vers la page de connexion
+    
+    // Réinitialiser l'état après déconnexion
+    isLoggingOut = false;
+    
+    // Redirection immédiate après la déconnexion
+    router.replace("/"); 
   } catch (error) {
+    // Réinitialiser l'état en cas d'erreur
+    isLoggingOut = false;
+    
     console.error("Erreur lors de la déconnexion:", error);
+    
+    // Gestion plus détaillée de l'erreur
+    if (error instanceof Error) {
+      alert(`Erreur de déconnexion : ${error.message}`);
+    } else {
+      alert("Une erreur est survenue lors de la déconnexion.");
+    }
+    
+    // Tenter une redirection de secours
+    try {
+      router.replace("/");
+    } catch (routerError) {
+      console.error("Erreur de redirection:", routerError);
+    }
   }
 };
 
