@@ -67,49 +67,47 @@ const HomeClient = () => {
             // Safely extract and set prenom
             const fetchedPrenom = userData?.prenom || userData?.nom || 'Utilisateur';
             setPrenom(fetchedPrenom);
-  
-            // Check if user has panier data
-            if (userData?.panier) {
-              const userPanierAddresses = Object.keys(userData.panier);
-              console.log("Adresses de panier du client:", userPanierAddresses);
-  
-              if (userPanierAddresses.length > 0) {
-                // Get all paniers that match any of the client's panier addresses
-                const paniersRef = collection(db, 'Panier');
-                const allClientPaniers = [];
-  
-                // Query each address separately for paniers
-                for (const address of userPanierAddresses) {
-                  const paniersQuery = query(
-                    paniersRef, 
-                    where('adresse', '==', address)
-                  );
-                  const paniersSnapshot = await getDocs(paniersQuery);
-  
-                  const addressPaniers = paniersSnapshot.docs.map(doc => {
-                    const panierData = doc.data();
-                    // Add the client's panier specifics for this address
-                    const clientPanierInfo = userData.panier[address];
-                    
-                    return {
-                      id: doc.id,
-                      ...panierData,
-                      clientPanierInfo: clientPanierInfo, // Add client's panier info
-                      typePanier: clientPanierInfo?.familial === 1 ? 'Familial' : 
-                                  clientPanierInfo?.simple === 1 ? 'Simple' : 'Standard'
-                    };
-                  });
-                  
-                  console.log(`Paniers trouvés pour adresse ${address}:`, addressPaniers.length);
-                  allClientPaniers.push(...addressPaniers);
+            
+            // Get the client's ID (both document ID and the clientid field if it exists)
+            const clientDocId = clientDoc.id;
+            const clientId = userData?.clientid || 1; // Utiliser le champ clientid s'il existe, sinon utiliser 1 par défaut
+            console.log("ID du client:", clientId);
+            
+            // Find paniers where clientid array contains this client's ID
+            const paniersRef = collection(db, 'Panier');
+            const paniersQuery = query(
+              paniersRef,
+              where('clientid', 'array-contains', clientId)
+            );
+            
+            const paniersSnapshot = await getDocs(paniersQuery);
+            console.log("Nombre de paniers trouvés:", paniersSnapshot.size);
+            
+            if (!paniersSnapshot.empty) {
+              const clientPaniers = paniersSnapshot.docs.map(doc => {
+                const panierData = doc.data();
+                
+                // Si le client a des infos de panier spécifiques pour cette adresse, les ajouter
+                let clientPanierInfo = null;
+                let typePanier = 'Standard';
+                
+                if (userData?.panier && panierData.adresse && userData.panier[panierData.adresse]) {
+                  clientPanierInfo = userData.panier[panierData.adresse];
+                  typePanier = clientPanierInfo.familial === 1 ? 'Familial' : 
+                               clientPanierInfo.simple === 1 ? 'Simple' : 'Standard';
                 }
-  
-                setPaniers(allClientPaniers);
-              } else {
-                console.log("Aucune adresse de panier trouvée pour cet utilisateur.");
-              }
+                
+                return {
+                  id: doc.id,
+                  ...panierData,
+                  clientPanierInfo: clientPanierInfo,
+                  typePanier: typePanier
+                };
+              });
+              
+              setPaniers(clientPaniers);
             } else {
-              console.log("Aucune structure de panier trouvée pour cet utilisateur.");
+              console.log("Aucun panier trouvé pour cet utilisateur.");
             }
           } else {
             console.log("Aucun client trouvé avec cet email.");
@@ -304,6 +302,7 @@ const HomeClient = () => {
               </Text>
             </View>
           ) : notifications.length > 0 ? (
+            // Afficher uniquement les deux dernières notifications
             notifications.slice(0, 2).map((item) => (
               <View 
                 key={item.id} 
@@ -362,6 +361,12 @@ const HomeClient = () => {
               <TouchableOpacity 
                 key={panier.id}
                 className="bg-white rounded-lg p-4 mb-4 shadow-md border border-gray-100"
+                onPress={() => {
+                  router.push({
+                    pathname: '/(tabs)/panierRecap',
+                    params: { panierID: panier.id }
+                  });
+                }}
               >
                 <View className="flex-row justify-between items-center mb-2">
                   <Text className="text-lg font-semibold text-gray-900">
