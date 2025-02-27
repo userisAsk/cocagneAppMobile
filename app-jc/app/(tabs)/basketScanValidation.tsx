@@ -579,7 +579,12 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
   };
              
              
-
+  const navigateBack = () => {
+    router.push({
+      pathname: '/(tabs)/deliveryDepot',
+      params: { villeNom, jour }
+    });
+  };
 
 
   if (hasPermission === null) {
@@ -597,12 +602,12 @@ console.log("🔍 Mise à jour de allScanned :", isAllScanned);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#3B82F6" />
-        </TouchableOpacity>
+      <TouchableOpacity 
+  style={styles.iconButton} 
+  onPress={navigateBack}
+>
+  <Ionicons name="arrow-back" size={24} color="#3B82F6" />
+</TouchableOpacity>
         <Text style={styles.headerTitle}>
           Distribution des Paniers
         </Text>

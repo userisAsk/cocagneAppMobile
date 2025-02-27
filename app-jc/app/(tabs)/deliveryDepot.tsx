@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  StyleSheet,
   RefreshControl,
   Alert,
+  StyleSheet,
 } from "react-native";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { router, useLocalSearchParams } from "expo-router";
@@ -15,6 +15,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { db } from "../../FirebaseConfig";
 import { doc, getDoc, DocumentData, getDocs, where, collection, query } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Styles natifs pour Map et les éléments qui pourraient poser problème
+const styles = StyleSheet.create({
+  map: {
+    width: "100%",
+    height: 300,
+  },
+});
 
 // Interfaces
 interface Coordinates {
@@ -30,175 +38,6 @@ interface Depot {
   ordre?: number; 
   isDelivered?: boolean;
 }
-
-// Styles
-const styles = StyleSheet.create({
-  deliveredMarkerContainer: {
-    backgroundColor: '#10B981', // Vert pour les dépôts livrés
-    borderColor: 'white',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#F3F4F6",
-  },
-  map: {
-    width: "100%",
-    height: 300,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#3B82F6",
-    flex: 1,
-    textAlign: "center",
-  },
-  iconButton: {
-    padding: 8,
-  },
-  mapContainer: {
-    margin: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  depotInfo: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  depotTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#1F2937",
-  },
-  depotAddress: {
-    fontSize: 16,
-    marginBottom: 4,
-    color: "#4B5563",
-  },
-  depotHoraire: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-  depotNumbers: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  nextDepotContainer: {
-    margin: 16,
-  },
-  nextDepotTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#1F2937",
-  },
-  depotCard: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "white",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "white",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#DC2626",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  backButton: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  markerContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#3B82F6",
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  selectedMarkerContainer: {
-    backgroundColor: "#2563EB",
-    borderColor: "#FBBF24",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  markerText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  scanButton: {
-    backgroundColor: "#3B82F6",
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
 
 const DeliveryDepot: React.FC = () => {
   // États
@@ -332,26 +171,25 @@ const DeliveryDepot: React.FC = () => {
         throw new Error(`Aucun dépôt trouvé pour ${villeNom}`);
       }
 
-      // Transformer en tableau avec ordre et statut livré basé sur l'adresse
       // Transformer en tableau avec ordre et statut livré basé sur l'identifiant
-const depotsArray = Object.entries(villeDepots)
-.map(([depotId, depot]: [string, any]) => {
-  try {
-    // Vérifier si ce dépôt est livré en utilisant son identifiant
-    const isDelivered = addresses.includes(depotId);
-    
-    return {
-      ...depot,
-      depotId, // Ajouter l'identifiant du dépôt
-      coordonnées: validateCoordinates(depot.coordonnées),
-      isDelivered: isDelivered
-    };
-  } catch (e) {
-    console.error(`Erreur de validation des coordonnées pour ${depot.adresse}:`, e);
-    throw e;
-  }
-})
-.sort((a, b) => a.ordre - b.ordre);
+      const depotsArray = Object.entries(villeDepots)
+        .map(([depotId, depot]: [string, any]) => {
+          try {
+            // Vérifier si ce dépôt est livré en utilisant son identifiant
+            const isDelivered = addresses.includes(depotId);
+            
+            return {
+              ...depot,
+              depotId, // Ajouter l'identifiant du dépôt
+              coordonnées: validateCoordinates(depot.coordonnées),
+              isDelivered: isDelivered
+            };
+          } catch (e) {
+            console.error(`Erreur de validation des coordonnées pour ${depot.adresse}:`, e);
+            throw e;
+          }
+        })
+        .sort((a, b) => a.ordre - b.ordre);
 
       console.log('Dépôts chargés avec statut de livraison:', JSON.stringify(depotsArray, null, 2));
       setDepots(depotsArray);
@@ -431,6 +269,13 @@ const depotsArray = Object.entries(villeDepots)
     return depots[currentIndex + 1];
   };
 
+  const navigateBack = () => {
+    router.push({
+      pathname: '/(tabs)/panierRecap',
+      params: { villeNom, jour }
+    });
+  };
+
   // Composant pour le marqueur personnalisé avec état livré
   const CustomMarker = ({ depot, isSelected }: { depot: Depot, isSelected: boolean }) => (
     <Marker
@@ -439,12 +284,12 @@ const depotsArray = Object.entries(villeDepots)
       description={depot.horaire + (depot.isDelivered ? " (Livré)" : "")}
       tracksViewChanges={false}
     >
-      <View style={[
-        styles.markerContainer,
-        isSelected && styles.selectedMarkerContainer,
-        depot.isDelivered && styles.deliveredMarkerContainer
-      ]}>
-        <Text style={styles.markerText}>{depot.ordre}</Text>
+      <View className={`
+        w-[30px] h-[30px] bg-blue-500 rounded-full justify-center items-center border-2 border-white
+        ${isSelected ? 'w-[36px] h-[36px] bg-blue-600 border-yellow-300' : ''}
+        ${depot.isDelivered ? 'bg-emerald-500' : ''}
+      `}>
+        <Text className="text-white font-bold text-sm">{depot.ordre}</Text>
       </View>
     </Marker>
   );
@@ -457,7 +302,7 @@ const depotsArray = Object.entries(villeDepots)
     const nextDepot = getNextDepot(selectedDepot);
   
     return (
-      <View style={styles.mapContainer}>
+      <View className="m-4 rounded-xl overflow-hidden bg-white shadow-md">
         <MapView
           style={styles.map}
           initialRegion={region}
@@ -497,16 +342,16 @@ const depotsArray = Object.entries(villeDepots)
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View className="flex-row items-center justify-between pt-10 px-4 pb-4 bg-white border-b border-gray-200">
       <TouchableOpacity 
-        style={styles.iconButton} 
-        onPress={() => router.back()}
-      >
-        <Ionicons name="arrow-back" size={24} color="#3B82F6" />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>Dépôts - {villeNom}</Text>
+  className="p-2" 
+  onPress={navigateBack}
+>
+  <Ionicons name="arrow-back" size={24} color="#3B82F6" />
+</TouchableOpacity>
+      <Text className="text-xl font-bold text-blue-500 flex-1 text-center">Dépôts - {villeNom}</Text>
       <TouchableOpacity 
-        style={styles.iconButton} 
+        className="p-2" 
         onPress={onRefresh}
       >
         <Ionicons name="refresh" size={24} color="#3B82F6" />
@@ -516,15 +361,15 @@ const depotsArray = Object.entries(villeDepots)
 
   // Rendu des informations du dépôt avec état de livraison
   const renderDepotInfo = () => (
-    <View style={styles.depotInfo}>
-      <Text style={styles.depotTitle}>
+    <View className="m-4 p-4 rounded-xl bg-white shadow-md">
+      <Text className="text-lg font-bold mb-2 text-gray-800">
         Point de dépôt #{selectedDepot?.ordre}
         {selectedDepot?.isDelivered && " (Livré)"}
       </Text>
-      <Text style={styles.depotAddress}>{selectedDepot?.adresse}</Text>
-      <Text style={styles.depotHoraire}>Horaire: {selectedDepot?.horaire}</Text>
+      <Text className="text-base mb-1 text-gray-700">{selectedDepot?.adresse}</Text>
+      <Text className="text-sm mb-1 text-gray-500">Horaire: {selectedDepot?.horaire}</Text>
       {selectedDepot?.num_depot && (
-        <Text style={styles.depotNumbers}>
+        <Text className="text-sm text-gray-500">
           Numéros de dépôt: {selectedDepot.num_depot.join(", ")}
         </Text>
       )}
@@ -537,17 +382,20 @@ const depotsArray = Object.entries(villeDepots)
     
     if (selectedDepot.isDelivered) {
       return (
-        <View style={[styles.scanButton, { backgroundColor: '#9CA3AF' }]}>
+        <View className="mx-4 my-4 p-4 rounded-xl bg-gray-400 flex-row items-center justify-center">
           <Ionicons name="checkmark-circle" size={24} color="white" />
-          <Text style={{ color: 'white', marginLeft: 8 }}>Déjà livré</Text>
+          <Text className="text-white ml-2">Déjà livré</Text>
         </View>
       );
     }
     
     return (
-      <TouchableOpacity style={styles.scanButton} onPress={handleScanPress}>
+      <TouchableOpacity 
+        className="mx-4 my-4 p-4 rounded-xl bg-blue-500 flex-row items-center justify-center"
+        onPress={handleScanPress}
+      >
         <Ionicons name="qr-code-outline" size={24} color="white" />
-        <Text style={{ color: 'white', marginLeft: 8 }}>Scanner le QR code</Text>
+        <Text className="text-white ml-2">Scanner le QR code</Text>
       </TouchableOpacity>
     );
   };
@@ -573,7 +421,7 @@ const depotsArray = Object.entries(villeDepots)
   // Rendu pour l'écran de chargement
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text>Chargement des dépôts...</Text>
       </View>
@@ -583,13 +431,13 @@ const depotsArray = Object.entries(villeDepots)
   // Rendu pour les erreurs
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View className="flex-1 justify-center items-center p-4 bg-white">
+        <Text className="text-base text-red-600 text-center mb-4">{error}</Text>
         <TouchableOpacity 
-          style={styles.backButton}
+          className="bg-blue-500 py-3 px-6 rounded-lg"
           onPress={() => router.back()}
         >
-          <Text style={styles.backButtonText}>Retour</Text>
+          <Text className="text-white text-base font-semibold">Retour</Text>
         </TouchableOpacity>
       </View>
     );
@@ -597,7 +445,7 @@ const depotsArray = Object.entries(villeDepots)
 
   // Rendu principal
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-gray-100">
       {renderHeader()}
       <ScrollView
         refreshControl={

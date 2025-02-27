@@ -42,6 +42,14 @@ const PanierRecap = () => {
     simple: 0,
   });
 
+  const navigateBack = () => {
+    router.push({
+      pathname: '/(tabs)/home',
+      params: { villeNom, jour }
+    });
+  };
+  
+
   useEffect(() => {
     let isMounted = true;
     const fetchPaniers = async () => {
@@ -132,9 +140,12 @@ const PanierRecap = () => {
 
   const renderHeader = () => (
     <View className="flex-row items-center justify-between mb-4 pt-10">
-      <TouchableOpacity onPress={() => router.back()} className="p-3">
-        <Ionicons name="arrow-back" size={24} color="#3B82F6" />
-      </TouchableOpacity>
+      <TouchableOpacity 
+  className="p-2" 
+  onPress={navigateBack}
+>
+  <Ionicons name="arrow-back" size={24} color="#3B82F6" />
+</TouchableOpacity>
       <Text className="text-2xl font-bold text-blue-700 text-center flex-1 pr-11">
         Panier - {villeNom}
       </Text>
