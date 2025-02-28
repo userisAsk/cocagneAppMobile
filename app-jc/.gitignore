@@ -40,5 +40,3 @@ app-example
 # Ignorer les fichiers de configuration Firebase et les clés API
 firebaseConfig.ts
 
-# Ignorer le fichier de clés Google Cloud JSON
-app-jc/jsonservice/jc-service.json
