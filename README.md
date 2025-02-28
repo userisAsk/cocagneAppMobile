@@ -15,15 +15,21 @@ Nous développons une Application mobile complexe en React native et firebase
 
 pour lancer le projet la première fois 
 
-- avoir l'application Expo sur téléphone
-- scanner le QR code
-- ne marche pas sur le web (map)
+```bash
+  npm install
+```
+ 
+si jamais il y a une erreur  dans tsconfig executer cette commande : npx expo install expo
 
-  commande a lancer pour démarrer l'application
+commande a lancer pour démarrer l'application
 
 ```bash
   npx expo start --clear
 ```
+
+- avoir l'application Expo sur téléphone
+- scanner le QR code
+- ne marche pas sur le web (map)
 
 se connecter sur l'application Livreur : 
 - mail : maxime.lol@gmail.com
@@ -51,5 +57,10 @@ a mettre dans  dans le Fichier FirebaseConfig.ts
 ```
  
 
+Qr code signification : 
 
+Qrcode valeur : 1 = panier simple
+Qrcode valeur : 2 = panier familial
+Qrcode valeur : 28 = depot dans epinal qui correspond
+Qrcode valeur : 70 = depot dans epinal qui correspond
 
